@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2A（雨妗）\丁子淇--Alevel数据采集.docx'
     student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2E (思雨)\数据采集要求-杜俊熙.docx'
-    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASE(杨怡)\数据采集--任绪鑫.docx'
+    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASE(杨怡)\数据采集--任绪鑫.docx'
     # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASF(雨田_佳铭)_\数据采集--仵同悦.docx'
     # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部G2D(杨怡)\数据采集--吴众豪.docx'
     
@@ -44,8 +44,9 @@ if __name__ == "__main__":
 
     # #==================step 3: get candidate program by intended majors======================
     print('extend the intended major and search candidate program again...')
-    all_extended_majors = extend_multiple_intended_majors(api_key,all_possible_major_category,program_majors)
+    all_extended_majors = extend_multiple_intended_majors(api_key,all_possible_major_category,program_majors,select_model='doubao')
     all_extended_majors = [ele for ele in all_extended_majors if ele in program_majors]
+    all_extended_majors = all_extended_majors[:3*len(all_possible_major_category)]
     print('extended majors:',all_extended_majors)
     df_candidate_program = get_candidate_program_from_majors(engine,table,all_extended_majors,columns = ['Major','Major_New'])
     print('number of candidate program from extended intended majors: ',len(df_candidate_program))
@@ -64,11 +65,11 @@ if __name__ == "__main__":
     print('filter program by exam and language...')
     print('be patient... it may take a few minutes to finish the comparison with llm ...')
     keep_columns = ['Program_ID','Exam_Requirements','Language_Requirements']
-    df_candiate_program_filter = filter_program_by_exam_and_language(api_key,df_candidate_program[keep_columns], student_scores)
+    df_candiate_program_filter = filter_program_by_exam_and_language(api_key,df_candidate_program[keep_columns], student_scores,select_model='doubao')
     print('number of candidate program after comparing exam requirement with student exam score: ',len(df_candiate_program_filter))
     #==================step 7: get final program and univ===========================
     print('get more info of candidate program...')
-    df_candidate_program_info = pd.merge(df_candiate_program_filter[['Program_ID','Explanation']], df_all_program, on='Program_ID', how='left')
+    df_candidate_program_info = pd.merge(df_candiate_program_filter[['Program_ID','Explanation','Language']], df_all_program, on='Program_ID', how='left')
     print('number of candidate program after merging with program info: ',len(df_candidate_program_info))
 
     #==================step 6: rank program by majors===========================

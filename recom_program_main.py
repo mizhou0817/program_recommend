@@ -222,7 +222,7 @@ def extend_intended_major(api_key,intended_major,all_candidates_majors):
     return all_extended_majors
 
 
-def extend_multiple_intended_majors(api_key,intended_majors,all_candidates_majors):
+def extend_multiple_intended_majors(api_key,intended_majors,all_candidates_majors,select_model='doubao'):
     """
     扩展意向专业
     examples:
@@ -247,16 +247,33 @@ def extend_multiple_intended_majors(api_key,intended_majors,all_candidates_major
     ["专业1", "专业2", "专业3"， "专业4", "专业5", "专业6",...]
     """
 
-    # 调用 DeepSeek API
-    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-    response = client.chat.completions.create(
-        model="deepseek-chat",  # 使用的模型
-        messages=[
-            {"role": "system", "content": "你是一名专业的教育顾问，擅长分析和匹配专业。"},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.5  # 调整随机性
-    )
+    if select_model != 'doubao':
+        # 调用 DeepSeek API
+        print('使用deepseek v3')
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        response = client.chat.completions.create(
+            model="deepseek-chat",  # 使用的模型
+            messages=[
+                {"role": "system", "content": "你是一名专业的教育顾问，擅长分析和匹配专业。"},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2  # 调整随机性
+        )
+    else:
+        print('使用豆包')
+        #doubao
+        client = OpenAI(api_key="20cfa121-c5f5-45fe-a4ad-b43ec11b209a",#"50139153-f85c-4d77-90e9-41ee692c535e", 
+                        base_url="https://ark.cn-beijing.volces.com/api/v3")
+        response = client.chat.completions.create(
+            # 替换 <YOUR_ENDPOINT_ID> 为您的方舟推理接入点 ID
+            model="ep-20241209113858-bmv9x",#"ep-20250128114936-c59tn",
+            messages=[
+                {"role": "system", "content": "你是一名专业的教育顾问，擅长分析和匹配专业"},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2  # 调整随机性
+        )
+
 
     # 获取返回内容
     result = response.choices[0].message.content
@@ -320,7 +337,7 @@ def get_candidate_program_from_majors(engine,table,extended_majors,columns = ['M
     return df_candidate_program
 
 
-def filter_program_by_exam_and_language(api_key,candidate_program, student_scores):
+def filter_program_by_exam_and_language(api_key,candidate_program, student_scores,select_model='doubao'):
     """
     通过考试成绩和语言成绩过滤项目
     """
@@ -328,6 +345,41 @@ def filter_program_by_exam_and_language(api_key,candidate_program, student_score
     data_json = candidate_program.to_json(orient="records")
 
     # 构造 prompt
+    # user_prompt = f"""
+    #     以下是某些高校的项目要求和学生的成绩描述：
+    #     项目要求, 请看列'Exam_Requirements' 和 'Language_Requirements'：
+    #     {data_json}
+
+    #     学生的成绩的描述：
+    #     成绩描述：{student_scores}
+
+    #     根据以下规则分析考试成绩和语言要求，并与学生的成绩描述进行对比，提供明确的分析和解释：
+    #     1：分级规则：
+    #     1.1： 对考试成绩和英语成绩分别按A-Level标准进行综合分级（A*, A, B, C, D, E, U），以统一标准评估成绩,注意，有些成绩要求可能已经按A-Level分好级了，如此就直接使用。
+    #     1.2： 对学生的考试成绩和英语成绩也按A-Leval标准进行综合分级(A*, A, B, C, D, E, U)，作为比较依据。注意，有些学生的考试成绩可能已经按A-Level分好级了，如此就直接使用。
+    #     2: 比较规则：
+    #     2.1: 成绩符合要求： 如果学生成绩与要求等级完全匹配（如要求为A或B，学生成绩为A），标注为“成绩符合要求”。
+    #     2.2: 成绩接近要求： 如果学生成绩稍低于要求（如要求为A，学生成绩为B），标注为“成绩接近要求”。
+    #     2.3: 缺少相关成绩： 如果学生未提供某门考试或英语成绩，标注为“缺少相关成绩”。
+    #     2.4: 成绩需要提高： 如果学生成绩显著低于要求（如要求为A，学生成绩为C或D），标注为“成绩需要提高”。
+    #     3: 筛选规则：
+    #     3.1: 如果学生成绩描述中某门考试出现多次，取最高成绩进行分析。
+    #     3.2：只选择学生成绩中最好的3门与项目的成绩要求进行比较。也就是说，如果学生提供了5门成绩，只选最好的3门来与要求的成绩进行比较
+
+        # 返回结果的格式是一个 JSON 列表，包含：
+        # - Program_ID
+        # - Explanation
+        # - Language
+
+        # 例如：
+        # [
+        #     {{"Program_ID": 101, "Explanation": "成绩符合要求"}},
+        #     {{"Program_ID": 102, "Explanation": "成绩接近要求"}},
+        #     {{"Program_ID": 103, "Explanation": "缺少相关成绩"}},
+        #     {{"Program_ID": 103, "Explanation": "成绩不符合要求"}}
+        # ]
+        # """
+
     user_prompt = f"""
         以下是某些高校的项目要求和学生的成绩描述：
         项目要求, 请看列'Exam_Requirements' 和 'Language_Requirements'：
@@ -336,41 +388,71 @@ def filter_program_by_exam_and_language(api_key,candidate_program, student_score
         学生的成绩的描述：
         成绩描述：{student_scores}
 
-        根据以下规则分析考试成绩和语言要求，并与学生的成绩描述进行对比，提供明确的分析和解释：
-        1：分级规则：
-        1.1： 对考试成绩和英语成绩分别按A-Level标准进行综合分级（A*, A, B, C, D, E, U），以统一标准评估成绩,注意，有些成绩要求可能已经按A-Level分好级了，如此就直接使用。
-        1.2： 对学生的考试成绩和英语成绩也按A-Leval标准进行综合分级(A*, A, B, C, D, E, U)，作为比较依据。注意，有些学生的考试成绩可能已经按A-Level分好级了，如此就直接使用。
-        2: 比较规则：
-        2.1: 成绩符合要求： 如果学生成绩与要求等级完全匹配（如要求为A或B，学生成绩为A），标注为“成绩符合要求”。
-        2.2: 成绩接近要求： 如果学生成绩稍低于要求（如要求为A，学生成绩为B），标注为“成绩接近要求”。
-        2.3: 缺少相关成绩： 如果学生未提供某门考试或英语成绩，标注为“缺少相关成绩”。
-        2.4: 成绩需要提高： 如果学生成绩显著低于要求（如要求为A，学生成绩为C或D），标注为“成绩需要提高”。
-        3: 筛选规则：
-        3.1: 如果学生成绩描述中某门考试出现多次，取最高成绩进行分析。
+        根据以下规则，分析学生的考试成绩和语言成绩，并与学校的申请要求进行对比，提供清晰的分析和解释：
+        分析规则：
+        1：成绩分级：
+        1.1：申请要求分级：
+        1.1.1：Exam_Requirements中定义了按A-Level标准的最低成绩要求（例如，AAB表示至少需要两门A和一门B）。这是申请该项目的最低标准。
+        1.2：学生成绩分级：
+        1.2.1：如果学生的成绩已经按A-Level标准分级（如A*, A, B等），直接使用。
+        1.2.2：如果未分级，需要对每科成绩进行转换，按A-Level标准分级（A*, A, B, C, D, E, U），如果相同科目成绩出现多次，选最高的那次
+        1.2.3：从学生的成绩中选取满足申请要求格式的最佳成绩组合（例如，找到最优的AAB组合）。
+        2：语言要求：
+        2.1：检查Language_Requirements中规定的最低语言要求，验证学生的语言成绩是否满足。
+
+        成绩比较规则：
+        成绩符合要求：如果学生的成绩完全匹配或优于要求（如申请要求为AAB，学生成绩为AAA），标注为“成绩符合要求”。
+        成绩接近要求：如果学生成绩略低于要求（如申请要求为AAA，学生成绩为AAB），标注为“成绩接近要求”。
+        缺少相关成绩：如果学生提供的考试数量不足以用来比较，标注为“缺少相关成绩”。比如要求最少3门课程成绩，学生只提供2门或1门，则为缺少相关成绩。
+        成绩需要提高：如果学生成绩显著低于要求（如申请要求为AAA，学生成绩为CCC或DDD），标注为“成绩需要提高”。
+
+        语言比较规则：
+        达标：学生语言成绩满足申请项目中的语言要求。注意，学生语言成绩只要达到要求里面任何一个语言要求就行，比如要求里可能有IELTS或TOEFL，只要满足一样就属于达标。同时，如果申请要求中没有语言要求，则自动视为达标。
+        不达标：学生语言成绩不满足申请项目中的语言要求
+        缺失：学生还没有提供语言成绩
+
 
         返回结果的格式是一个 JSON 列表，包含：
         - Program_ID
         - Explanation
+        - Language
 
         例如：
         [
-            {{"Program_ID": 101, "Explanation": "成绩符合要求"}},
-            {{"Program_ID": 102, "Explanation": "成绩接近要求"}},
-            {{"Program_ID": 103, "Explanation": "缺少相关成绩"}},
-            {{"Program_ID": 103, "Explanation": "成绩不符合要求"}}
+            {{"Program_ID": 101, "Explanation": "成绩符合要求","Language":"达标"}},
+            {{"Program_ID": 102, "Explanation": "成绩接近要求","Language":"不达标"}},
+            {{"Program_ID": 103, "Explanation": "缺少相关成绩","Language":"达标"}},
+            {{"Program_ID": 103, "Explanation": "成绩不符合要求","Language":"缺失"}}
         ]
         """
     
-    # 调用 DeepSeek API
-    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-    response = client.chat.completions.create(
-        model="deepseek-chat",  # 使用的模型
-        messages=[
-            {"role": "system", "content": "你是一名专业的教育顾问，专注于帮助学生申请英国高校。你擅长根据学生的学习成绩和语言能力、分析是否符合各高校的项目要求"},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.5  # 调整随机性
-    )
+    if select_model != 'doubao':
+        print('使用deepseek v3')
+        # 调用 DeepSeek API
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        response = client.chat.completions.create(
+            model="deepseek-chat",  # 使用的模型
+            messages=[
+                {"role": "system", "content": "你是一名专业的教育顾问，专注于帮助学生申请英国高校。你擅长根据学生的学习成绩和语言能力、分析是否符合各高校的项目要求"},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2  # 调整随机性
+        )
+    else:
+        print('使用豆包')
+        #doubao
+        # client = OpenAI(api_key="50139153-f85c-4d77-90e9-41ee692c535e", base_url="https://ark.cn-beijing.volces.com/api/v3")
+        client = OpenAI(api_key="20cfa121-c5f5-45fe-a4ad-b43ec11b209a", base_url="https://ark.cn-beijing.volces.com/api/v3")
+        response = client.chat.completions.create(
+            # 替换 <YOUR_ENDPOINT_ID> 为您的方舟推理接入点 ID
+            model="ep-20241209113858-bmv9x", #"ep-20250128114936-c59tn",
+            messages=[
+                {"role": "system", "content": "你是一名专业的教育顾问，专注于帮助学生申请英国高校。你擅长根据学生的学习成绩和语言能力、分析是否符合各高校的项目要求"},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2  # 调整随机性
+        )
+        result = response.choices[0].message.content
 
     # 获取返回内容
     result = response.choices[0].message.content
