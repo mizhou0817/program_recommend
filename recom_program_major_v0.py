@@ -65,32 +65,18 @@ def extend_major_description(major_list,api_key,select_model='doubao'):
     try_count = 0
     while try_count < 3:
         try:
-            if select_model != 'doubao':
-                # 调用 DeepSeek API
-                print('使用deepseek v3')
-                client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-                response = client.chat.completions.create(
-                    model="deepseek-chat",  # 使用的模型
-                    messages=[
-                        {"role": "system", "content": "你是一名专业的教育顾问，擅长给学生或父母用简短文字描述专业"},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.2  # 调整随机性
-                )
-            else:
-                print('使用豆包')
-                #doubao
-                client = OpenAI(api_key=api_key,#"50139153-f85c-4d77-90e9-41ee692c535e", 
-                                base_url="https://ark.cn-beijing.volces.com/api/v3")
-                response = client.chat.completions.create(
-                    # 替换 <YOUR_ENDPOINT_ID> 为您的方舟推理接入点 ID
-                    model="ep-20241209113858-bmv9x",#"ep-20250128114936-c59tn",
-                    messages=[
-                        {"role": "system", "content": "你是一名专业的教育顾问，擅长给学生或父母用简短文字描述专业"},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.2  # 调整随机性
-                )
+            print('使用豆包')
+            client = OpenAI(api_key=api_key,#"50139153-f85c-4d77-90e9-41ee692c535e", 
+                            base_url="https://ark.cn-beijing.volces.com/api/v3")
+            response = client.chat.completions.create(
+                # 替换 <YOUR_ENDPOINT_ID> 为您的方舟推理接入点 ID
+                model="ep-20241209113858-bmv9x",#"ep-20250128114936-c59tn",
+                messages=[
+                    {"role": "system", "content": "你是一名专业的教育顾问，擅长给学生或父母用简短文字描述专业"},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.2  # 调整随机性
+            )
 
             # 获取返回内容
             result = response.choices[0].message.content
