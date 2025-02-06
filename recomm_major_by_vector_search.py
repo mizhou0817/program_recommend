@@ -225,7 +225,8 @@ def create_major_index(major_list,path_to_save_faiss_index,path_to_save_major_li
         majors_description = major_list
 
     # 加载 SentenceTransformer 模型
-    model = SentenceTransformer('shibing624/text2vec-base-chinese')
+    # model = SentenceTransformer('shibing624/text2vec-base-chinese')
+    model = SentenceTransformer("moka-ai/m3e-base")
     # 计算句子嵌入，并归一化
     sentence_vectors = model.encode(majors_description, normalize_embeddings=True) #sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
@@ -264,7 +265,8 @@ def search_candidate_major(intend_major,path_to_save_faiss_index,path_to_save_ma
         return []
     
     # 计算输入意向专业的向量
-    model = SentenceTransformer('shibing624/text2vec-base-chinese')
+    # model = SentenceTransformer('shibing624/text2vec-base-chinese')
+    model = SentenceTransformer("moka-ai/m3e-base")
     sentence_vectors = model.encode([intend_major], normalize_embeddings=True)
 
     # 使用 Faiss 索引进行搜索
@@ -279,6 +281,7 @@ def search_candidate_major(intend_major,path_to_save_faiss_index,path_to_save_ma
 
 
     return candidate_majors
+
 
 
 def get_student_intended_category_major_other_info(student_doc_path):
@@ -417,9 +420,9 @@ if __name__ == "__main__":
     print('大类专业数量:',len(level0_majors))
 
     # 对大类专业建立faiss索引
-    path_to_save_faiss_index_level0 = 'level0_majors_faiss_index.index'
-    path_to_save_major_list_level0 = 'level0_majors_major_list.json'
-    path_to_save_major_description_list_level0 = 'level0_majors_major_description_list.json'
+    path_to_save_faiss_index_level0 = 'level0_majors_faiss_index2.index'
+    path_to_save_major_list_level0 = 'level0_majors_major_list2.json'
+    path_to_save_major_description_list_level0 = 'level0_majors_major_description_list2.json'
     if not os.path.exists(path_to_save_faiss_index_level0):
         print('=====================对大类专业建立Faiss索引=====================')
         create_major_index(level0_majors,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,select_model='doubao')
@@ -439,9 +442,9 @@ if __name__ == "__main__":
     print('小类专业数量:',len(level1_majors))
 
     # 对小类专业建立faiss索引
-    path_to_save_faiss_index_level1 = 'level1_majors_faiss_index.index'    
-    path_to_save_major_list_level1 = 'level1_majors_major_list.json'
-    path_to_save_major_description_list_level1 = 'level1_majors_major_description_list.json'
+    path_to_save_faiss_index_level1 = 'level1_majors_faiss_index2.index'    
+    path_to_save_major_list_level1 = 'level1_majors_major_list2.json'
+    path_to_save_major_description_list_level1 = 'level1_majors_major_description_list2.json'
     if not os.path.exists(path_to_save_faiss_index_level1):
         print('=======================对小类专业建立Faiss索引=======================')
         create_major_index(level1_majors,path_to_save_faiss_index_level1,path_to_save_major_list_level1,path_to_save_major_description_list_level1,select_model='doubao')
@@ -450,10 +453,10 @@ if __name__ == "__main__":
 
     #===============================3：得到学生输入表中的意向大类专业，小类专业，其他意向信息 ======================
     student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2A（雨妗）\丁子淇--Alevel数据采集.docx'
-    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2E (思雨)\数据采集要求-杜俊熙.docx'
-    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASE(杨怡)\数据采集--任绪鑫.docx'
-    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASF(雨田_佳铭)_\数据采集--仵同悦.docx'
-    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部G2D(杨怡)\数据采集--吴众豪.docx'
+    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2E (思雨)\数据采集要求-杜俊熙.docx'
+    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASE(杨怡)\数据采集--任绪鑫.docx'
+    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASF(雨田_佳铭)_\数据采集--仵同悦.docx'
+    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部G2D(杨怡)\数据采集--吴众豪.docx'
 
     print('=========================得到学生意向大类专业，小类专业，其他意向信息=========================')
     intended_major, intended_category, other_info = get_student_intended_category_major_other_info(student_doc_path)
@@ -495,7 +498,7 @@ if __name__ == "__main__":
     recomm_major_list_level0 = remove_duplicates_preserve_order(recomm_major_list_level0)[:3]
 
     # c: 根据学生意向其他信息，使用向量搜索得到对应最匹配的专业
-    recomm_major_list_other = []
+    recomm_major_list_other_level0,recomm_major_list_other_level1 = [], []
     if len(other_info) > 0:
         print('========================================根据学生意向其他信息，使用向量搜索得到对应最匹配的专业========================================')
         # 使用llm在other_info中提取出意向专业
@@ -508,11 +511,14 @@ if __name__ == "__main__":
 
         # 使用向量搜索得到对应最匹配的专业,前三个为大类，后三个为小类
         for major in other_info_more[:3]:
-            candidate_major = search_candidate_major(major,path_to_save_faiss_index_level1,path_to_save_major_list_level1,path_to_save_major_description_list_level1,extract_top_k=1)
-            recomm_major_list_other.extend(candidate_major)
+            candidate_major = search_candidate_major(major,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,extract_top_k=3)
+            recomm_major_list_other_level0.extend(candidate_major)
+        recomm_major_list_other_level0 = remove_duplicates_preserve_order(reorder_list(recomm_major_list_other_level0))[:3]
         for major in other_info_more[3:]:
-            candidate_major = search_candidate_major(major,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,extract_top_k=1)
-            recomm_major_list_other.extend(candidate_major)
+            candidate_major = search_candidate_major(major,path_to_save_faiss_index_level1,path_to_save_major_list_level1,path_to_save_major_description_list_level1,extract_top_k=3)
+            recomm_major_list_other_level1.extend(candidate_major)
+        recomm_major_list_other_level1 = remove_duplicates_preserve_order(reorder_list(recomm_major_list_other_level1))[:3]
+
 
     #========================5：输出最后结果 ======================
     print('\n\n\n================================================================================================================')
@@ -537,10 +543,22 @@ if __name__ == "__main__":
 
     if len(other_info) > 0:
         print('采集到的有关学生的其他信息如下：',other_info.replace('\n', ' '))
-        print('\n向量搜索出来的专业大类为：',remove_duplicates_preserve_order(recomm_major_list_other[:3]))
-        print('向量搜索出来的专业小类为：',remove_duplicates_preserve_order(recomm_major_list_other[3:]),'\n\n')
+        print('\n向量搜索出来的专业大类为：',recomm_major_list_other_level0)
+        print('向量搜索出来的专业小类为：',recomm_major_list_other_level1,'\n\n')
     else:
         print('采集到的学生其他意向信息为空\n\n')
+
+    
+    final_major_level0 = recomm_major_list_level0 + recomm_major_list_other_level0
+    final_major_level1 = recomm_major_list_level1 + recomm_major_list_other_level1
+
+    final_major_level0 = remove_duplicates_preserve_order(final_major_level0)[:3]
+    final_major_level1 = remove_duplicates_preserve_order(final_major_level1)[:3]
+
+    print('最终搜索出来的专业大类为：',final_major_level0)
+    print('最终搜索出来的专业小类为：',final_major_level1,'\n\n')
+
+
 
 
     end_time = time.time()
