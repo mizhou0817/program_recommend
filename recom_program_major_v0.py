@@ -49,7 +49,7 @@ def get_program_info(host, user, password, database, table, columns_name, port=3
     final = df[columns_name]
     return final
 
-def extend_major_description(major_list,api_key,select_model='doubao'):
+def extend_major_description(major_list,api_key):
     """
     根据major_list，得到每个major的描述信息,组成一个诸如['major_name:description']的列表
     """
@@ -95,12 +95,12 @@ def extend_major_description(major_list,api_key,select_model='doubao'):
 
     return major_list
 
-def create_major_index(major_list,path_to_save_faiss_index,path_to_save_major_list,path_to_save_major_description_list,api_key,select_model='doubao'):
+def create_major_index(major_list,path_to_save_faiss_index,path_to_save_major_list,api_key):
     """
     创建专业向量库,并保存Faiss索引和句子（专业）顺序
     """
-    if select_model == 'doubao' or select_model == 'deepseek':
-        majors_description = extend_major_description(major_list,api_key,select_model)
+    if len(api_key) > 10:
+        majors_description = extend_major_description(major_list,api_key)
         print(majors_description)
     else:
         majors_description = major_list
@@ -120,9 +120,6 @@ def create_major_index(major_list,path_to_save_faiss_index,path_to_save_major_li
     faiss.write_index(index, path_to_save_faiss_index)
     with open(path_to_save_major_list, "w", encoding="utf-8") as f:
         json.dump(major_list, f, ensure_ascii=False, indent=4)
-
-    with open(path_to_save_major_description_list, "w", encoding="utf-8") as f:
-        json.dump(majors_description, f, ensure_ascii=False, indent=4)
 
     print(f"Index保存到： {path_to_save_faiss_index}")
     print(f"对应原信息保存到： {path_to_save_major_list}")
@@ -317,18 +314,17 @@ def search_candidate_program(intend_majors,path_to_save_faiss_index,path_to_save
 
     return df_program_filtered
 
-def search_candidate_major(intended_category,path_to_save_faiss_index,path_to_save_major_list,path_to_save_major_description_list):
+def search_candidate_major(intended_category,path_to_save_faiss_index,path_to_save_major_list):
     """
     根据学生输入的意向专业，使用向量搜索得到最匹配的专业
     """
 
     # 加载 Faiss 索引
-    if os.path.exists(path_to_save_faiss_index) and os.path.exists(path_to_save_major_list) and os.path.exists(path_to_save_major_description_list):
+    if os.path.exists(path_to_save_faiss_index) and os.path.exists(path_to_save_major_list):
         loaded_index = faiss.read_index(path_to_save_faiss_index)
         with open(path_to_save_major_list, "r", encoding="utf-8") as f:
             loaded_sentences = json.load(f)
-        with open(path_to_save_major_description_list, "r", encoding="utf-8") as f:
-            loaded_sentences_description = json.load(f)
+
         print(f"加载Index: {path_to_save_faiss_index}")
         print(f"加载专业信息： {path_to_save_major_list}")
     else:
@@ -493,7 +489,7 @@ def get_program_from_intended_major_other(intended_major_other,path_to_save_fais
 
     return df_intended_major_other_to_program
 
-def get_major_from_intended_category(intended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id):
+def get_major_from_intended_category(intended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id):
     """
     根据学生输入的意向专业大类，使用向量搜索得到最匹配的专业
     """
@@ -501,7 +497,7 @@ def get_major_from_intended_category(intended_category,path_to_save_faiss_index_
     if len(intended_category) > 0:
         for category in intended_category:
             extended_category = extend_description_to_input(category,api_key)
-            df_candidate_major_tmp = search_candidate_major(extended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0)
+            df_candidate_major_tmp = search_candidate_major(extended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0)
             df_candidate_major_tmp['用户输入的意向大类或其他标注信息'] = len(df_candidate_major_tmp) * [category]
             df_intended_category_to_major = pd.concat([df_intended_category_to_major,df_candidate_major_tmp])
 
@@ -526,16 +522,18 @@ def get_major_from_intended_category(intended_category,path_to_save_faiss_index_
     return df_intended_category_to_major
 
 
-def get_major_from_other_info(other_info,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id):
+def get_major_from_other_info(other_info,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id):
     """
     根据学生输入的其他信息，使用向量搜索得到最匹配的专业
     """
+
     df_other_info_to_major = pd.DataFrame()
     other_info = other_info.strip()
     if len(other_info) > 1:
         extended_other_info = extend_description_to_input(other_info,api_key)
-        df_other_info = search_candidate_major(extended_other_info, path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0)
+        df_other_info = search_candidate_major(extended_other_info, path_to_save_faiss_index_level0,path_to_save_major_list_level0)
         df_other_info['用户输入的其他信息'] = len(df_other_info) * [other_info]
+
         df_other_info_to_major_tmp = df_other_info[df_other_info['向量相似性'] >= similarity_threshold]
         if len(df_other_info_to_major_tmp) < 3:
             df_other_info_to_major = df_other_info_to_major.head(3)
@@ -569,13 +567,13 @@ def get_program_black_list(input_strs,path_to_save_faiss_index,path_to_save_prog
 
     return []
 
-def get_major_black_list(input_strs,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,df_major_id):
+def get_major_black_list(input_strs,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,df_major_id):
     """
     """
     negative_major_description = extract_negative_description_from_input(input_strs,api_key)
     print('negative description:',negative_major_description)
     if len(negative_major_description) > 2:
-        df_other_info = search_candidate_major(negative_major_description, path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0)
+        df_other_info = search_candidate_major(negative_major_description, path_to_save_faiss_index_level0,path_to_save_major_list_level0)
         df_other_info_to_major_tmp = df_other_info[df_other_info['向量相似性'] >= 0.82]
         if len(df_other_info_to_major_tmp) < 3:
             df_other_info_to_major = df_other_info.head(3)
@@ -649,7 +647,7 @@ if __name__ == "__main__":
     print('starting search')
 
     #====================== 1： 得到大类专业并建立Faiss索引 ======================
-    host = "eli-tech.cd2ep9f6ojwf.us-east-2.rds.amazonaws.com"
+    host = "elitech-database.cd2ep9f6ojwf.us-east-2.rds.amazonaws.com"  #"eli-tech.cd2ep9f6ojwf.us-east-2.rds.amazonaws.com"
     user = "Eli_education"
     password = "EliEducation2024!"
     database = "Hailiang"
@@ -663,11 +661,10 @@ if __name__ == "__main__":
     # 对大类专业建立faiss索引
     path_to_save_faiss_index_level0 = 'major_faiss_index.index'
     path_to_save_major_list_level0 = 'major_list.json'
-    path_to_save_major_description_list_level0 = 'major_description_list.json'
     api_key = '20cfa121-c5f5-45fe-a4ad-b43ec11b209a'
     if not os.path.exists(path_to_save_faiss_index_level0):
         print('=====================对大类专业建立Faiss索引=====================')
-        create_major_index(level0_majors,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,select_model='doubao')
+        create_major_index(level0_majors,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key)
         print('大类专业索引建立完成')
     #====================== 2： 建立 program索引 ======================
     table = "UK_program_undergrad" 
@@ -708,7 +705,7 @@ if __name__ == "__main__":
         black_list_program_id = get_program_black_list(all_input_strs,path_to_save_faiss_index,path_to_save_program_dataframe,api_key)
 
     if len(all_input_strs.strip()) > 2:
-        black_list_major_id = get_major_black_list(all_input_strs,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,df_major_id)
+        black_list_major_id = get_major_black_list(all_input_strs,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,df_major_id)
 
     # white list
     if len(all_input_strs.strip()) > 2:
@@ -726,19 +723,20 @@ if __name__ == "__main__":
 
 
     print('采集到的学生意向专业小类其他信息：',intended_major_other)
-    df_intended_major_other_to_program = get_program_from_intended_major_other(intended_major_other,path_to_save_faiss_index,path_to_save_program_dataframe,api_key,similarity_threshold)
+    df_intended_major_other_to_program = get_program_from_intended_major_other(intended_major_other,path_to_save_faiss_index,path_to_save_program_dataframe,api_key,similarity_threshold,black_list_program_id)
     df_intended_major_other_to_program.to_excel('意向专业小类其他信息的项目推荐.xlsx',index=False)
     print('\n\n')
 
 
     print('采集到的学生意向专业大类：',intended_category)
-    df_candidate_major = get_major_from_intended_category(intended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id)
+    df_candidate_major = get_major_from_intended_category(intended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id)
     df_candidate_major.to_excel('大类专业推荐.xlsx',index=False)
+
     print('\n\n')
 
 
     print('采集到的学生其他信息：',other_info)
-    df_other_info = get_major_from_other_info(other_info,path_to_save_faiss_index_level0,path_to_save_major_list_level0,path_to_save_major_description_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list)
+    df_other_info = get_major_from_other_info(other_info,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id)
     df_other_info.to_excel("学生其他信息专业推荐.xlsx", index=False)
     print('\n\n')
 
