@@ -12,6 +12,7 @@ import json
 import time
 import faiss
 from sentence_transformers import SentenceTransformer
+# from FlagEmbedding import FlagModel
 
 def remove_duplicates_preserve_order(input_list):
     seen = set()  # 用于存储已访问的元素
@@ -108,7 +109,8 @@ def create_major_index(major_list,path_to_save_faiss_index,path_to_save_major_li
     # 加载 SentenceTransformer 模型
     # model = SentenceTransformer('shibing624/text2vec-base-chinese')
     model = SentenceTransformer("moka-ai/m3e-base")
-    # 计算句子嵌入，并归一化
+    # model = SentenceTransformer("BAAI/bge-large-zh-v1.5")
+    # # 计算句子嵌入，并归一化
     sentence_vectors = model.encode(majors_description, normalize_embeddings=True) #sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
     # 创建 Faiss 索引
@@ -137,7 +139,8 @@ def create_program_index(program_dataframe,path_to_save_faiss_index,path_to_save
     # 加载 SentenceTransformer 模型
     # model = SentenceTransformer('shibing624/text2vec-base-chinese')
     model = SentenceTransformer("moka-ai/m3e-base")
-    # 计算句子嵌入，并归一化
+    # model = SentenceTransformer("BAAI/bge-large-zh-v1.5")
+    # # 计算句子嵌入，并归一化
     sentence_vectors = model.encode(program_name_description_list, normalize_embeddings=True) #sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
     # 创建 Faiss 索引
@@ -287,8 +290,10 @@ def search_candidate_program(intend_majors,path_to_save_faiss_index,path_to_save
     # 计算输入意向专业的向量
     # model = SentenceTransformer('shibing624/text2vec-base-chinese')
     model = SentenceTransformer("moka-ai/m3e-base")
-    print('输入为：',intend_majors)
+    # model = SentenceTransformer("BAAI/bge-large-zh-v1.5")
+    # print('输入为：',intend_majors)
     sentence_vectors = model.encode(intend_majors, normalize_embeddings=True)
+
     # 如果是一维的，将其转换为二维
     if sentence_vectors.ndim == 1:
         sentence_vectors = sentence_vectors.reshape(1, -1)
@@ -334,6 +339,7 @@ def search_candidate_major(intended_category,path_to_save_faiss_index,path_to_sa
     # 计算输入意向专业的向量
     # model = SentenceTransformer('shibing624/text2vec-base-chinese')
     model = SentenceTransformer("moka-ai/m3e-base")
+    # model = SentenceTransformer("BAAI/bge-large-zh-v1.5")
     sentence_vectors = model.encode([intended_category], normalize_embeddings=True)
 
     # 使用 Faiss 索引进行搜索
@@ -461,7 +467,9 @@ def get_program_from_intended_major(intended_major,path_to_save_faiss_index,path
                 df_intended_major_to_program = df_intended_major_to_program[~df_intended_major_to_program['Program_ID'].isin(black_list_program_id)]
             df_intended_major_to_program = df_intended_major_to_program.drop_duplicates(subset=['Program_ID'], keep='first')
             df_intended_major_to_program = df_intended_major_to_program.sort_values(by='向量相似性', ascending=False).reset_index(drop=True)
-
+    
+    if len(df_intended_major_to_program) > 30:
+        df_intended_major_to_program = df_intended_major_to_program.head(30)
 
     return df_intended_major_to_program
 
@@ -487,7 +495,11 @@ def get_program_from_intended_major_other(intended_major_other,path_to_save_fais
             df_intended_major_other_to_program = df_intended_major_other_to_program.drop_duplicates(subset=['Program_ID'], keep='first')
             df_intended_major_other_to_program = df_intended_major_other_to_program.sort_values(by='向量相似性', ascending=False).reset_index(drop=True)
 
+    if len(df_intended_major_other_to_program) > 25:
+        df_intended_major_other_to_program = df_intended_major_other_to_program.head(25)
+
     return df_intended_major_other_to_program
+
 
 def get_major_from_intended_category(intended_category,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key,similarity_threshold,df_major_id,white_list_major_list,black_list_major_id):
     """
@@ -659,9 +671,12 @@ if __name__ == "__main__":
     print('大类专业数量:',len(level0_majors))
 
     # 对大类专业建立faiss索引
+    # path_to_save_faiss_index_level0 = 'major_faiss_index_bge.index'
+    # path_to_save_major_list_level0 = 'major_list_bge.json'
     path_to_save_faiss_index_level0 = 'major_faiss_index.index'
     path_to_save_major_list_level0 = 'major_list.json'
     api_key = '20cfa121-c5f5-45fe-a4ad-b43ec11b209a'
+
     if not os.path.exists(path_to_save_faiss_index_level0):
         print('=====================对大类专业建立Faiss索引=====================')
         create_major_index(level0_majors,path_to_save_faiss_index_level0,path_to_save_major_list_level0,api_key)
@@ -671,6 +686,8 @@ if __name__ == "__main__":
     columns_name = ["Program_ID","Program_Name_EN","Program_Description"]  
     df_program = get_program_info(host, user, password, database, table, columns_name, port=3306)
 
+    # path_to_save_faiss_index = 'program_faiss_index_bge.index'
+    # path_to_save_program_dataframe = 'program_dataframe_bge.json'
     path_to_save_faiss_index = 'program_faiss_index.index'
     path_to_save_program_dataframe = 'program_dataframe.json'
     if not os.path.exists(path_to_save_faiss_index):
@@ -683,12 +700,12 @@ if __name__ == "__main__":
     #===============================3：得到学生输入表中的意向大类专业，小类专业，其他意向信息 ======================
     student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2A（雨妗）\丁子淇--Alevel数据采集.docx'
     student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel G2E (思雨)\数据采集要求-杜俊熙.docx'
-    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASE(杨怡)\数据采集--任绪鑫.docx'
-    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASF(雨田_佳铭)_\数据采集--仵同悦.docx'
-    # student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部G2D(杨怡)\数据采集--吴众豪.docx'
+    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASE(杨怡)\数据采集--任绪鑫.docx'
+    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部ASF(雨田_佳铭)_\数据采集--仵同悦.docx'
+    student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部G2D(杨怡)\数据采集--吴众豪.docx'
 
 
-    similarity_threshold=0.70
+    similarity_threshold= 0.65  #0.45   #0.70
 
     print('=========================得到学生意向大类专业，小类专业，其他意向信息=========================')
     intended_major, intended_major_other,intended_category, other_info = get_student_intended_category_major_other_info(student_doc_path)
@@ -743,12 +760,3 @@ if __name__ == "__main__":
     end_time = time.time()
     print(f'Total time: {end_time - start_time} seconds')
 
-
-
-
-
-
-    # input_str = "理工科"
-    # api_key = '20cfa121-c5f5-45fe-a4ad-b43ec11b209a'
-    # selected_majors = extract_positive_description_from_input(input_str,path_to_save_major_list_level0,api_key)
-    # print(selected_majors)
