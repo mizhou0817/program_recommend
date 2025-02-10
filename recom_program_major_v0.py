@@ -471,9 +471,14 @@ def get_program_from_intended_major(intended_major,path_to_save_faiss_index,path
     if len(df_intended_major_to_program) > 0 and len(white_list_program_id) > 0:
         df_intended_major_to_program = df_intended_major_to_program[df_intended_major_to_program['Program_ID'].isin(white_list_program_id)].reset_index(drop=True)
 
+    if len(intended_major)> 1:
+        # 把每个意向专业小类的前3行合起来放到dataframe的最前面，然后其他的按之前顺序排列
+        df_top3 = df_intended_major_to_program.groupby('意向专业小类').head(3).reset_index(drop=True)
+        df_top3_others = df_intended_major_to_program[~df_intended_major_to_program['Program_ID'].isin(df_top3['Program_ID'])]
+        df_intended_major_to_program = pd.concat([df_top3, df_top3_others], ignore_index=True).reset_index(drop=True)
+
     if len(df_intended_major_to_program) > 30:
         df_intended_major_to_program = df_intended_major_to_program.head(30)
-
 
     return df_intended_major_to_program
 
@@ -792,4 +797,7 @@ if __name__ == "__main__":
 
     end_time = time.time()
     print(f'Total time: {end_time - start_time} seconds')
+
+
+
 
