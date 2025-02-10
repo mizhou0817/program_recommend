@@ -449,7 +449,7 @@ def extract_negative_description_from_input(input_str,api_key):
 
 
 
-def get_program_from_intended_major(intended_major,path_to_save_faiss_index,path_to_save_program_dataframe,similarity_threshold,black_list_program_id):
+def get_program_from_intended_major(intended_major,path_to_save_faiss_index,path_to_save_program_dataframe,similarity_threshold,black_list_program_id,white_list_program_id):
     """
     根据学生输入的意向专业，使用向量搜索得到最匹配的program
     """
@@ -468,12 +468,16 @@ def get_program_from_intended_major(intended_major,path_to_save_faiss_index,path
             df_intended_major_to_program = df_intended_major_to_program.drop_duplicates(subset=['Program_ID'], keep='first')
             df_intended_major_to_program = df_intended_major_to_program.sort_values(by='向量相似性', ascending=False).reset_index(drop=True)
     
+    if len(df_intended_major_to_program) > 0 and len(white_list_program_id) > 0:
+        df_intended_major_to_program = df_intended_major_to_program[df_intended_major_to_program['Program_ID'].isin(white_list_program_id)].reset_index(drop=True)
+
     if len(df_intended_major_to_program) > 30:
         df_intended_major_to_program = df_intended_major_to_program.head(30)
 
+
     return df_intended_major_to_program
 
-def get_program_from_intended_major_other(intended_major_other,path_to_save_faiss_index,path_to_save_program_dataframe,api_key,similarity_threshold,black_list_program_id):
+def get_program_from_intended_major_other(intended_major_other,path_to_save_faiss_index,path_to_save_program_dataframe,api_key,similarity_threshold,black_list_program_id,white_list_program_id):
     """
     根据学生输入的意向专业其他信息，使用向量搜索得到最匹配的program
     """
@@ -495,8 +499,12 @@ def get_program_from_intended_major_other(intended_major_other,path_to_save_fais
             df_intended_major_other_to_program = df_intended_major_other_to_program.drop_duplicates(subset=['Program_ID'], keep='first')
             df_intended_major_other_to_program = df_intended_major_other_to_program.sort_values(by='向量相似性', ascending=False).reset_index(drop=True)
 
+    if len(df_intended_major_other_to_program) > 0 and len(white_list_program_id) > 0:
+        df_intended_major_other_to_program = df_intended_major_other_to_program[df_intended_major_other_to_program['Program_ID'].isin(white_list_program_id)].reset_index(drop=True)
+
     if len(df_intended_major_other_to_program) > 25:
         df_intended_major_other_to_program = df_intended_major_other_to_program.head(25)
+
 
     return df_intended_major_other_to_program
 
@@ -651,9 +659,24 @@ def get_major_white_list(input_str,path_to_save_major_list,api_key):
     return []
 
 
+def get_program_id_white_list(major_white_list,host,user,password,database,uk_major_undergrad_table = "UK_major_undergrad",uk_program_major_map_table="UK_program_major_map",port=3306):
+    engine = create_engine(f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}")
+    df_major_undergrad = pd.read_sql_table(uk_major_undergrad_table, engine)
+    df_program_major_map = pd.read_sql_table(uk_program_major_map_table, engine)
+
+
+    # 取df_major_undergrad 中 Major_Name_CH 在 major_white_list 中的行
+    df_major_undergrad_tmp = df_major_undergrad[df_major_undergrad['Major_Name_CH'].isin(major_white_list)]
+
+    # 取df_program_major_map 中 Major_ID 在 df_major_undergrad_tmp['Major_ID'] 中的行
+    df_program_major_map_tmp = df_program_major_map[df_program_major_map['Major_ID'].isin(df_major_undergrad_tmp['Major_ID'])]
+
+    # 返回所有的Program_ID
+    return df_program_major_map_tmp['Program_ID'].unique().tolist()
 
 
 if __name__ == "__main__":
+
 
     start_time = time.time()
     print('starting search')
@@ -705,7 +728,7 @@ if __name__ == "__main__":
     student_doc_path = r'C:\Faliu\mizhou\eli\数据采集1.10\数据采集1.10\Alevel\Alevel 致远部G2D(杨怡)\数据采集--吴众豪.docx'
 
 
-    similarity_threshold= 0.65  #0.45   #0.70
+    similarity_threshold= 0.65  #0.45(bge)   #0.65(m3e)
 
     print('=========================得到学生意向大类专业，小类专业，其他意向信息=========================')
     intended_major, intended_major_other,intended_category, other_info = get_student_intended_category_major_other_info(student_doc_path)
@@ -716,6 +739,8 @@ if __name__ == "__main__":
 
 
     # 建立黑名单 白名单
+    black_list_program_id,black_list_major_id,white_list_program_id,white_list_major_list = [],[],[],[]
+
     all_input_strs = intended_major + [intended_major_other] + intended_category + [other_info]
     all_input_strs = ','.join(all_input_strs)
     if len(all_input_strs.strip()) > 2:
@@ -729,18 +754,24 @@ if __name__ == "__main__":
         white_list_major_list = get_major_white_list(all_input_strs,path_to_save_major_list_level0,api_key)
         print('白名单专业:',white_list_major_list)
 
+    if len(white_list_major_list) > 0:
+        white_list_program_id = get_program_id_white_list(white_list_major_list,host,user,password,database)
+        # print('白名单项目ID:',white_list_program_id)
+        print('白名单项目数量:',len(white_list_program_id))
+
+
 
     print('========================================================================================================')
     print('========================================================================================================')
     print('========================================================================================================')
     print('采集到的学生意向专业小类：',intended_major)
-    df_intended_major_to_program = get_program_from_intended_major(intended_major,path_to_save_faiss_index,path_to_save_program_dataframe,similarity_threshold,black_list_program_id)
+    df_intended_major_to_program = get_program_from_intended_major(intended_major,path_to_save_faiss_index,path_to_save_program_dataframe,similarity_threshold,black_list_program_id,white_list_program_id)
     df_intended_major_to_program.to_excel('意向专业小类的项目推荐.xlsx',index=False)
     print('\n\n')
 
 
     print('采集到的学生意向专业小类其他信息：',intended_major_other)
-    df_intended_major_other_to_program = get_program_from_intended_major_other(intended_major_other,path_to_save_faiss_index,path_to_save_program_dataframe,api_key,similarity_threshold,black_list_program_id)
+    df_intended_major_other_to_program = get_program_from_intended_major_other(intended_major_other,path_to_save_faiss_index,path_to_save_program_dataframe,api_key,similarity_threshold,black_list_program_id,white_list_program_id)
     df_intended_major_other_to_program.to_excel('意向专业小类其他信息的项目推荐.xlsx',index=False)
     print('\n\n')
 
